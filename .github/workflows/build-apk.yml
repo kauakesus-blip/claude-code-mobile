@@ -14,47 +14,132 @@ jobs:
       - name: Baixar Repositório
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
       - name: Configurar Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Instalar Capacitor
+      - name: Criar Projeto Android Nativo
         run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/android
+          mkdir -p android-project/app/src/main/java/com/claude/code/mobile
+          mkdir -p android-project/app/src/main/res/values
+          mkdir -p android-project/app/src/main/assets
 
-      - name: Criar Configuração do Capacitor
-        run: |
-          echo 'import { CapacitorConfig } from "@capacitor/cli";' > capacitor.config.ts
-          echo 'const config: CapacitorConfig = {' >> capacitor.config.ts
-          echo '  appId: "com.claude.code.mobile",' >> capacitor.config.ts
-          echo '  appName: "Claude Code",' >> capacitor.config.ts
-          echo '  webDir: "www"' >> capacitor.config.ts
-          echo '};' >> capacitor.config.ts
-          echo 'export default config;' >> capacitor.config.ts
+          # Copiar o index.html para os assets do app
+          cp index.html android-project/app/src/main/assets/index.html
 
-      - name: Preparar Estrutura Web
-        run: |
-          mkdir -p www
-          cp index.html www/index.html
+          # Criar o AndroidManifest.xml
+          cat << 'EOF' > android-project/app/src/main/AndroidManifest.xml
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.claude.code.mobile">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <application
+                  android:allowBackup="true"
+                  android:usesCleartextTraffic="true"
+                  android:label="Claude Code"
+                  android:theme="@android:style/Theme.NoTitleBar">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
 
-      - name: Adicionar Plataforma Android
-        run: |
-          npx cap add android --force
+          # Criar o código Java da MainActivity (WebView)
+          cat << 'EOF' > android-project/app/src/main/java/com/claude/code/mobile/MainActivity.java
+          package com.claude.code.mobile;
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.webkit.WebView;
+          import android.webkit.WebSettings;
+          import android.webkit.WebViewClient;
 
-      - name: Sincronizar Projeto
-        run: |
-          npx cap sync android
+          public class MainActivity extends Activity {
+              private WebView webView;
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  webView = new WebView(this);
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  webView.setWebViewClient(new WebViewClient());
+                  webView.loadUrl("file:///android_asset/index.html");
+                  setContentView(webView);
+              }
+          }
+          EOF
 
-      - name: Compilar APK
+          # Criar o build.gradle do app
+          cat << 'EOF' > android-project/app/build.gradle
+          apply plugin: 'com.android.application'
+          android {
+              namespace 'com.claude.code.mobile'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.claude.code.mobile"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                  }
+              }
+          }
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+          }
+          EOF
+
+          # Criar o settings.gradle principal
+          cat << 'EOF' > android-project/settings.gradle
+          rootProject.name = "ClaudeCodeMobile"
+          include ':app'
+          EOF
+
+          # Criar o build.gradle raiz
+          cat << 'EOF' > android-project/build.gradle
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.1.4'
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          EOF
+
+          # Criar o gradle.properties
+          cat << 'EOF' > android-project/gradle.properties
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m
+          EOF
+
+          # Copiar o wrapper do gradle para compilar
+          cd android-project
+          gradle wrapper
+
+      - name: Compilar APK (Gradle Build)
         run: |
-          cd android
+          cd android-project
           chmod +x gradlew
           ./gradlew assembleDebug
 
@@ -62,4 +147,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Claude-Code-Mobile.apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android-project/app/build/outputs/apk/debug/app-debug.apk
