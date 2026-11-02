@@ -29,9 +29,18 @@ jobs:
         run: |
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
+      - name: Preparar Estrutura Web
+        run: |
+          mkdir -p www
+          cp index.html www/index.html
+
       - name: Adicionar Plataforma Android
         run: |
           npx cap add android
+
+      - name: Copiar Arquivos Web
+        run: |
+          npx cap copy android
 
       - name: Compilar APK
         run: |
