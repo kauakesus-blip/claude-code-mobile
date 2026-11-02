@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code Mobile</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background-color: #0d1117; color: #c9d1d9; display: flex; flex-direction: column; height: 100vh; }
+    
+    header { background-color: #161b22; padding: 14px 18px; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 1rem; color: #d2a8ff; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; background-color: #238636; color: #fff; }
+
+    #chat-container { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+    .message { max-width: 90%; padding: 12px 16px; border-radius: 12px; line-height: 1.45; font-size: 0.9rem; white-space: pre-wrap; word-break: break-word; }
+    .user { align-self: flex-end; background-color: #1f6feb; color: #ffffff; border-bottom-right-radius: 2px; }
+    .ai { align-self: flex-start; background-color: #161b22; color: #c9d1d9; border: 1px solid #30363d; border-bottom-left-radius: 2px; }
+
+    #controls { padding: 12px; background-color: #161b22; border-top: 1px solid #30363d; display: flex; flex-direction: column; gap: 10px; }
+    .bar { display: flex; gap: 8px; }
+    
+    input[type="text"] { flex: 1; background-color: #0d1117; border: 1px solid #30363d; padding: 12px 14px; border-radius: 20px; color: #c9d1d9; outline: none; font-size: 0.9rem; }
+    input[type="text"]:focus { border-color: #58a6ff; }
+
+    button { background-color: #238636; border: none; color: white; padding: 10px 16px; border-radius: 20px; font-weight: 600; cursor: pointer; }
+    button:active { opacity: 0.8; }
+    .btn-tools { background-color: #21262d; color: #79c0ff; border: 1px solid #30363d; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>⚡ Claude Code Mobile</h1>
+    <span class="badge">Offline</span>
+  </header>
+
+  <div id="chat-container">
+    <div class="message ai">Agente pronto. Conectado ao servidor local do Termux.</div>
+  </div>
+
+  <div id="controls">
+    <div class="bar">
+      <button type="button" class="btn-tools" onclick="executarComando('/help')">🛠️ Ferramentas</button>
+      <button type="button" class="btn-tools" onclick="executarComando('/clear')">🧹 Limpar</button>
+    </div>
+    <div class="bar">
+      <input type="text" id="userInput" placeholder="Escreva sua instrução..." onkeypress="checarEnter(event)">
+      <button onclick="enviarMensagem()">Enviar</button>
+    </div>
+  </div>
+
+  <script>
+    function enviarMensagem() {
+      const input = document.getElementById('userInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const chat = document.getElementById('chat-container');
+      chat.innerHTML += `<div class="message user">${text}</div>`;
+      input.value = '';
+      chat.scrollTop = chat.scrollHeight;
+
+      fetch('http://127.0.0.1:8765/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: text }],
+          temperature: 0.2
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        const reply = data.choices[0].message.content;
+        chat.innerHTML += `<div class="message ai">${reply}</div>`;
+        chat.scrollTop = chat.scrollHeight;
+      })
+      .catch(() => {
+        chat.innerHTML += `<div class="message ai" style="color: #f85149;">Erro: Inicie o servidor no Termux (127.0.0.1:8765).</div>`;
+        chat.scrollTop = chat.scrollHeight;
+      });
+    }
+
+    function executarComando(cmd) { document.getElementById('userInput').value = cmd; }
+    function checarEnter(e) { if (e.key === 'Enter') enviarMensagem(); }
+  </script>
+</body>
+</html>
