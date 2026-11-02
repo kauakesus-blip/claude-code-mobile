@@ -29,6 +29,16 @@ jobs:
         run: |
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
+      - name: Criar Configuração do Capacitor
+        run: |
+          echo 'import { CapacitorConfig } from "@capacitor/cli";' > capacitor.config.ts
+          echo 'const config: CapacitorConfig = {' >> capacitor.config.ts
+          echo '  appId: "com.claude.code.mobile",' >> capacitor.config.ts
+          echo '  appName: "Claude Code",' >> capacitor.config.ts
+          echo '  webDir: "www"' >> capacitor.config.ts
+          echo '};' >> capacitor.config.ts
+          echo 'export default config;' >> capacitor.config.ts
+
       - name: Preparar Estrutura Web
         run: |
           mkdir -p www
@@ -36,11 +46,11 @@ jobs:
 
       - name: Adicionar Plataforma Android
         run: |
-          npx cap add android
+          npx cap add android --force
 
-      - name: Copiar Arquivos Web
+      - name: Sincronizar Projeto
         run: |
-          npx cap copy android
+          npx cap sync android
 
       - name: Compilar APK
         run: |
