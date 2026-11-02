@@ -77,9 +77,11 @@ jobs:
           }
           EOF
 
-          # Criar o build.gradle do app
+          # Criar o build.gradle do app com sintaxe moderna compatível
           cat << 'EOF' > android-project/app/build.gradle
-          apply plugin: 'com.android.application'
+          plugins {
+              id 'com.android.application'
+          }
           android {
               namespace 'com.claude.code.mobile'
               compileSdk 34
@@ -101,28 +103,30 @@ jobs:
           }
           EOF
 
-          # Criar o settings.gradle principal
+          # Criar o settings.gradle principal com repositórios
           cat << 'EOF' > android-project/settings.gradle
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
           rootProject.name = "ClaudeCodeMobile"
           include ':app'
           EOF
 
-          # Criar o build.gradle raiz
+          # Criar o build.gradle raiz com o plugin do Android Gradle
           cat << 'EOF' > android-project/build.gradle
-          buildscript {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-              dependencies {
-                  classpath 'com.android.tools.build:gradle:8.1.4'
-              }
-          }
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
+          plugins {
+              id 'com.android.application' version '8.2.2' apply false
           }
           EOF
 
@@ -133,9 +137,21 @@ jobs:
           org.gradle.jvmargs=-Xmx2048m
           EOF
 
-          # Copiar o wrapper do gradle para compilar
+          # Forçar o uso de uma versão estável e compatível do Gradle (8.5)
+          mkdir -p android-project/gradle/wrapper
+          cat << 'EOF' > android-project/gradle/wrapper/gradle-wrapper.properties
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
+          networkTimeout=10000
+          validateDistributionUrl=true
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          EOF
+
+          # Baixar o executável do gradle wrapper para garantir autonomia
           cd android-project
-          gradle wrapper
+          gradle wrapper --gradle-version 8.5
 
       - name: Compilar APK (Gradle Build)
         run: |
