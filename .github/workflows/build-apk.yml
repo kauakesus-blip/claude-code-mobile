@@ -12,15 +12,15 @@ jobs:
 
     steps:
       - name: Baixar Repositório
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Configurar Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Configurar Java 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
@@ -29,9 +29,8 @@ jobs:
         run: |
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-      - name: Gerar Projeto Android
+      - name: Adicionar Plataforma Android
         run: |
-          npx cap init "Claude Code" "com.claude.code.mobile" --web-dir .
           npx cap add android
 
       - name: Compilar APK
